@@ -4,15 +4,38 @@ import { Order, Payee, Suborder } from "@/types";
 // Local storage keys
 const ORDERS_KEY = "splitpay_orders";
 const CURRENT_USER_KEY = "splitpay_current_user";
+const DEFAULT_USER = "default@example.com";
 
-// Get current user
+/**
+ * Gets the current logged-in user email address
+ * @returns Current user email or default value if not logged in
+ */
 export const getCurrentUser = (): string => {
-  return localStorage.getItem(CURRENT_USER_KEY) || "default@example.com";
+  return localStorage.getItem(CURRENT_USER_KEY) || DEFAULT_USER;
 };
 
-// Set current user
+/**
+ * Checks if a user is currently logged in
+ * @returns True if a user is logged in, false otherwise
+ */
+export const isLoggedIn = (): boolean => {
+  const currentUser = getCurrentUser();
+  return currentUser !== DEFAULT_USER;
+};
+
+/**
+ * Sets the current user email address
+ * @param email Email address to set as current user
+ */
 export const setCurrentUser = (email: string): void => {
   localStorage.setItem(CURRENT_USER_KEY, email);
+};
+
+/**
+ * Logs the current user out by resetting to default
+ */
+export const logoutUser = (): void => {
+  localStorage.setItem(CURRENT_USER_KEY, DEFAULT_USER);
 };
 
 // Get all orders

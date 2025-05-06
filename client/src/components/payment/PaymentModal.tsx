@@ -1,10 +1,13 @@
-import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Suborder, PaymentMethod } from "@/types";
 import { formatCurrency } from "@/lib/utils";
 import PaymentMethodSelector from "./PaymentMethodSelector";
 import PayPalCheckoutButton from "./PayPalCheckoutButton";
+import { getCurrentUser } from "@/lib/sessionStorage";
+import { useToast } from "@/hooks/use-toast";
+import { Icon } from "@/components/ui/icon";
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -23,6 +26,23 @@ export default function PaymentModal({
 }: PaymentModalProps) {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [currentUser, setCurrentUser] = useState<string>("");
+  const { toast } = useToast();
+  
+  // Get the current logged-in user
+  useEffect(() => {
+    const user = getCurrentUser();
+    setCurrentUser(user);
+    
+    // If the current user doesn't match the payee email, show a warning
+    if (user !== suborder.payee.email && isOpen) {
+      toast({
+        title: "Payment Notice",
+        description: `You're logged in as ${user} but making a payment for ${suborder.payee.name} (${suborder.payee.email})`,
+        variant: "destructive"
+      });
+    }
+  }, [isOpen, suborder.payee]);
 
   const handlePaymentSelect = (method: PaymentMethod) => {
     setPaymentMethod(method);
@@ -38,6 +58,11 @@ export default function PaymentModal({
       onPaymentComplete();
     } catch (error) {
       console.error("Payment error:", error);
+      toast({
+        title: "Payment Failed",
+        description: "There was an error processing your payment. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setIsProcessing(false);
     }
@@ -48,12 +73,26 @@ export default function PaymentModal({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Make Payment</DialogTitle>
+          <DialogDescription>
+            {currentUser === suborder.payee.email ? (
+              <>Making payment as <strong>{suborder.payee.name}</strong></>
+            ) : (
+              <>Making payment on behalf of <strong>{suborder.payee.name}</strong></>
+            )}
+          </DialogDescription>
         </DialogHeader>
         
         <div className="py-4">
-          <div className="mb-6">
-            <p className="text-sm text-gray-500 mb-1">Payment for</p>
-            <p className="font-medium text-secondary">{orderDescription}</p>
+          <div className="mb-4">
+            <div className="bg-blue-50 rounded p-3 flex items-start mb-4">
+              <Icon name="info-circle" className="text-blue-500 mt-0.5 mr-2" />
+              <div>
+                <p className="text-sm font-medium text-blue-700">Payment Information</p>
+                <p className="text-sm text-blue-600">
+                  You're paying your portion of "{orderDescription}"
+                </p>
+              </div>
+            </div>
           </div>
           
           <div className="mb-6 bg-gray-50 p-4 rounded">
@@ -89,6 +128,13 @@ export default function PaymentModal({
                 currency="USD" 
                 intent="CAPTURE"
                 onSuccess={onPaymentComplete}
+                onError={(error) => {
+                  toast({
+                    title: "Payment Failed",
+                    description: "There was an error processing your PayPal payment. Please try again.",
+                    variant: "destructive"
+                  });
+                }}
               />
             </div>
           ) : (
