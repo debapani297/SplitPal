@@ -33,15 +33,27 @@ export default function Sidebar() {
     // For this demo, just reset the current user
     setCurrentUser("default@example.com");
     setCurrentUserState("default@example.com");
+    // Reload to trigger redirection
+    window.location.href = "/login";
   };
 
-  const navItems = [
+  // Basic navigation items always available
+  const baseNavItems = [
     { path: AppRoutes.DASHBOARD, label: "Dashboard", icon: "home" },
+  ];
+  
+  // Navigation items that require authentication
+  const authNavItems = [
     { path: AppRoutes.CREATE_ORDER, label: "Create Order", icon: "plus-circle" },
     { path: AppRoutes.VIEW_ORDERS, label: "View Orders", icon: "list-alt" },
     { path: AppRoutes.PAY_SUBORDERS, label: "Pay Suborders", icon: "credit-card" },
     { path: AppRoutes.PAY_MAIN_ORDER, label: "Pay Main Order", icon: "dollar-sign" },
   ];
+  
+  // Show different nav items based on authentication state
+  const navItems = currentUser && currentUser !== "default@example.com"
+    ? [...baseNavItems, ...authNavItems]
+    : baseNavItems;
 
   return (
     <>
@@ -75,19 +87,34 @@ export default function Sidebar() {
           </nav>
         </div>
         <div className="border-t border-gray-200 mt-auto p-4">
-          <div className="flex items-center">
-            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-secondary">
-              <Icon name="user" />
-            </div>
-            <span className="text-secondary ml-2">{currentUser}</span>
-          </div>
-          <Button 
-            variant="ghost" 
-            className="mt-2 text-sm text-red-500 hover:text-red-700 p-0"
-            onClick={handleLogout}
-          >
-            <Icon name="sign-out-alt" className="mr-1" /> Logout
-          </Button>
+          {currentUser && currentUser !== "default@example.com" ? (
+            // Logged in state - show user info and logout
+            <>
+              <div className="flex items-center">
+                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-secondary">
+                  <Icon name="user" />
+                </div>
+                <span className="text-secondary ml-2">{currentUser}</span>
+              </div>
+              <Button 
+                variant="ghost" 
+                className="mt-2 text-sm text-red-500 hover:text-red-700 p-0"
+                onClick={handleLogout}
+              >
+                <Icon name="sign-out-alt" className="mr-1" /> Logout
+              </Button>
+            </>
+          ) : (
+            // Logged out state - show login button
+            <Link href="/login">
+              <Button 
+                variant="outline" 
+                className="w-full"
+              >
+                <Icon name="sign-in-alt" className="mr-1" /> Login
+              </Button>
+            </Link>
+          )}
         </div>
       </aside>
       
