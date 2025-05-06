@@ -9,9 +9,20 @@ import CreateOrder from "@/pages/CreateOrder";
 import ViewOrders from "@/pages/ViewOrders";
 import PaySuborders from "@/pages/PaySuborders";
 import PayMainOrder from "@/pages/PayMainOrder";
-import Login from "@/pages/Login";
+import AuthPage from "@/pages/AuthPage";
 import { getCurrentUser, isLoggedIn } from "@/lib/sessionStorage";
 import { useEffect } from "react";
+
+// Redirect component for legacy routes
+function RedirectToAuth() {
+  const [, navigate] = useLocation();
+  
+  useEffect(() => {
+    navigate("/auth");
+  }, [navigate]);
+  
+  return null;
+}
 
 // Protected route component that redirects to login if not authenticated
 function ProtectedRoute({ component: Component, ...rest }: any) {
@@ -19,7 +30,7 @@ function ProtectedRoute({ component: Component, ...rest }: any) {
   
   useEffect(() => {
     if (!isLoggedIn()) {
-      navigate("/login");
+      navigate("/auth");
     }
   }, [navigate]);
   
@@ -31,7 +42,8 @@ function Router() {
     <AppLayout>
       <Switch>
         <Route path="/" component={Dashboard} />
-        <Route path="/login" component={Login} />
+        <Route path="/auth" component={AuthPage} />
+        <Route path="/login" component={RedirectToAuth} />
         <Route path="/create-order">
           {(params) => <ProtectedRoute component={CreateOrder} params={params} />}
         </Route>

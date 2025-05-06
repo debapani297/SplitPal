@@ -105,12 +105,12 @@ export default function Sidebar() {
             </>
           ) : (
             // Logged out state - show login button
-            <Link href="/login">
+            <Link href="/auth">
               <Button 
                 variant="outline" 
                 className="w-full"
               >
-                <Icon name="sign-in-alt" className="mr-1" /> Login
+                <Icon name="sign-in-alt" className="mr-1" /> Login / Sign Up
               </Button>
             </Link>
           )}
