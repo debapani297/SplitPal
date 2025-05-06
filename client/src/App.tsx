@@ -10,7 +10,7 @@ import ViewOrders from "@/pages/ViewOrders";
 import PaySuborders from "@/pages/PaySuborders";
 import PayMainOrder from "@/pages/PayMainOrder";
 import Login from "@/pages/Login";
-import { getCurrentUser } from "@/lib/sessionStorage";
+import { getCurrentUser, isLoggedIn } from "@/lib/sessionStorage";
 import { useEffect } from "react";
 
 // Protected route component that redirects to login if not authenticated
@@ -18,8 +18,7 @@ function ProtectedRoute({ component: Component, ...rest }: any) {
   const [, navigate] = useLocation();
   
   useEffect(() => {
-    const currentUser = getCurrentUser();
-    if (currentUser === "default@example.com") {
+    if (!isLoggedIn()) {
       navigate("/login");
     }
   }, [navigate]);

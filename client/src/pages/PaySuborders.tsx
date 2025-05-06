@@ -24,10 +24,24 @@ export default function PaySuborders() {
   const { toast } = useToast();
   const currentUser = getCurrentUser();
   
-  // Fetch orders on mount
+  // Fetch orders when component mounts or current user changes
   useEffect(() => {
     fetchPendingPayments();
-  }, []);
+    
+    // Add an event listener to refresh data when user logs in/out
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [currentUser]);
+  
+  // Handle localStorage changes (for when user logs in/out)
+  const handleStorageChange = (event: StorageEvent) => {
+    if (event.key === 'splitpay_current_user') {
+      fetchPendingPayments();
+    }
+  };
   
   const fetchPendingPayments = () => {
     const orders = getPendingOrders();
@@ -35,12 +49,13 @@ export default function PaySuborders() {
     
     // Extract all pending suborders for the current user
     const suborders: { suborder: Suborder; order: Order }[] = [];
+    const userEmail = getCurrentUser();
     
     orders.forEach(order => {
       order.suborders
         .filter(
           suborder => 
-            suborder.payee.email === currentUser && 
+            suborder.payee.email === userEmail && 
             suborder.status === "pending"
         )
         .forEach(suborder => {
@@ -66,7 +81,7 @@ export default function PaySuborders() {
     toast({
       title: "Payment Successful",
       description: "Your payment has been processed successfully.",
-      variant: "success",
+      variant: "default",
     });
     closePaymentModal();
     fetchPendingPayments();

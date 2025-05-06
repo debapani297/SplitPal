@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { AppRoutes } from "@/types";
-import { getCurrentUser, setCurrentUser } from "@/lib/sessionStorage";
+import { getCurrentUser, setCurrentUser, isLoggedIn, logoutUser } from "@/lib/sessionStorage";
 import { useMobile } from "@/hooks/use-mobile";
 
 export default function Sidebar() {
@@ -29,10 +29,9 @@ export default function Sidebar() {
   };
 
   const handleLogout = () => {
-    // In a real app, this would clear authentication
-    // For this demo, just reset the current user
-    setCurrentUser("default@example.com");
-    setCurrentUserState("default@example.com");
+    // Use our logoutUser function to clear authentication
+    logoutUser();
+    setCurrentUserState(getCurrentUser());
     // Reload to trigger redirection
     window.location.href = "/login";
   };
@@ -51,7 +50,7 @@ export default function Sidebar() {
   ];
   
   // Show different nav items based on authentication state
-  const navItems = currentUser && currentUser !== "default@example.com"
+  const navItems = isLoggedIn()
     ? [...baseNavItems, ...authNavItems]
     : baseNavItems;
 
@@ -87,7 +86,7 @@ export default function Sidebar() {
           </nav>
         </div>
         <div className="border-t border-gray-200 mt-auto p-4">
-          {currentUser && currentUser !== "default@example.com" ? (
+          {isLoggedIn() ? (
             // Logged in state - show user info and logout
             <>
               <div className="flex items-center">
