@@ -18,7 +18,21 @@ export const setCurrentUser = (email: string): void => {
 // Get all orders
 export const getOrders = (): Order[] => {
   const ordersJson = localStorage.getItem(ORDERS_KEY);
-  return ordersJson ? JSON.parse(ordersJson) : [];
+  console.log("Retrieved orders from localStorage:", ordersJson);
+  
+  if (!ordersJson) {
+    console.log("No orders found in localStorage");
+    return [];
+  }
+  
+  try {
+    const parsedOrders = JSON.parse(ordersJson);
+    console.log("Parsed orders:", parsedOrders);
+    return parsedOrders;
+  } catch (error) {
+    console.error("Error parsing orders from localStorage:", error);
+    return [];
+  }
 };
 
 // Get specific order
@@ -31,6 +45,8 @@ export const getOrderById = (orderId: string): Order | undefined => {
 export const addOrder = (order: Order): void => {
   const orders = getOrders();
   orders.push(order);
+  console.log("Adding order to storage:", order);
+  console.log("Total orders in storage:", orders.length);
   localStorage.setItem(ORDERS_KEY, JSON.stringify(orders));
 };
 
