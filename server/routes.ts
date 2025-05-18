@@ -2,6 +2,11 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault } from "./paypal";
+import { createMainOrder } from "./createMainOrder";
+import { getUserOrders } from "./getUserOrders";
+import { paySubOrders } from "./payOrders";
+import { getFullDetails } from "./getFullDetails";
+import { handleRejectedPayment } from "./handleRejectedPayment";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API Routes
@@ -19,16 +24,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post(`${apiPrefix}/paypal/order/:orderID/capture`, async (req, res) => {
     await capturePaypalOrder(req, res);
   });
-  
-  // Order management routes
-  app.get(`${apiPrefix}/orders`, async (req, res) => {
-    try {
-      const orders = storage.getOrders();
-      res.json(orders);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to retrieve orders" });
+
+app.post(`${apiPrefix}/orders/:email`, async (req, res) => {
+  const userOrderMap = req.body;
+  const userEmail = req.params.email;
+
+  if (!userOrderMap || typeof userOrderMap !== "object") {
+    return res.status(400).json({ error: "Invalid session data" });
+  }
+
+  try {
+    const orders = await getUserOrders(userEmail, userOrderMap);
+    const resp= await getFullDetails(userEmail, orders);
+    res.json(resp);
+  } catch (error) {
+    console.error("Error fetching user orders:", error);
+    res.status(500).json({ message: "Failed to fetch user orders" });
+  }
+});
+
+app.post(`${apiPrefix}/get-suborders`, async (req, res) => {
+  const userEmail = req.body.email;
+  const userOrders = req.body.mainOrders;
+  const userSuborders = req.body.subOrders;
+
+  if (!userEmail || !userOrders || !userSuborders) {
+    return res.status(400).json({ error: "Invalid session data" });
+  }
+
+  const userOrderMap = {
+    [userEmail]: {
+      mainOrder: userOrders,
+      subOrder: userSuborders,
     }
-  });
+  };
+
+  try {
+     const orders = await getUserOrders(userEmail, userOrderMap);
+    const resp = await paySubOrders(userEmail, orders);
+    res.json(resp);
+    
+  } catch (error) {
+    console.error("Error fetching user orders:", error);
+    res.status(500).json({ message: "Failed to fetch user orders" });
+  }
+});
+
+
   
   app.get(`${apiPrefix}/orders/:id`, async (req, res) => {
     try {
@@ -41,14 +83,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to retrieve order" });
     }
   });
-  
-  app.post(`${apiPrefix}/orders`, async (req, res) => {
+
+  app.post(`${apiPrefix}/createOrder`, async (req, res) => {
     try {
-      const newOrder = req.body;
-      const savedOrder = storage.createOrder(newOrder);
-      res.status(201).json(savedOrder);
+      const { order, participants } = req.body;
+  
+      const { description, amount } = order;
+
+      console.log(description);
+      console.log(amount);
+      console.log(participants);
+  
+      const result = await createMainOrder(description, amount, participants);
+
+      console.log(result);
+  
+      res.status(201).json({ message: "Order created", data: result });
+  
     } catch (error) {
-      res.status(500).json({ error: "Failed to create order" });
+      console.error("❌ Error creating order:", error);
+      res.status(500).json({ message: "Failed to create order" });
+    }
+  });
+  
+  app.patch(`${apiPrefix}/reject/`, async (req, res) => {
+    try {
+      const suborderId = req.body.suborderId;
+      if (!suborderId) {
+        return res.status(400).json({ error: "Invalid suborder Id" });
+      }
+      
+      const updatedOrder = handleRejectedPayment(suborderId);
+      if (!updatedOrder) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+      
+      res.status(200).json({ error: updatedOrder });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update order status" });
     }
   });
   

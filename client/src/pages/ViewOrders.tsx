@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { AppRoutes, Order } from "@/types";
-import { getOrders } from "@/lib/sessionStorage";
+import { AppRoutes, Order, OrderStatus } from "@/types";
+import { getCurrentUser, getOrders } from "@/lib/sessionStorage";
 import PageHeader from "@/components/layout/PageHeader";
 import OrderCard from "@/components/orders/OrderCard";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
+import { fetchUserOrders } from "@/lib/api"; // Adjust path as needed
+import { toast } from "@/hooks/use-toast";
 
 export default function ViewOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -15,23 +17,62 @@ export default function ViewOrders() {
     fetchOrders();
   }, []);
   
-  const fetchOrders = () => {
-    // Get all orders from session storage without filtering
-    const allOrders = getOrders();
-    
-    // If there are no orders, log for debugging
-    if (allOrders.length === 0) {
-      console.log("No orders found in storage");
-    } else {
-      console.log(`Found ${allOrders.length} orders in storage`);
+  const fetchOrders = async () => {
+    try {
+      const userEmail = getCurrentUser(); // get user from session
+      console.log(userEmail);
+      const response = await fetchUserOrders(userEmail);
+
+    if (!response.orders || response.orders.length === 0) {
+      setOrders([]);
+      return;
     }
-    
-    // Sort by creation date (newest first)
-    allOrders.sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-    
-    setOrders(allOrders);
+  
+      // Step 1: Group by mainOrder.orderId
+      const grouped: { [key: string]: Order } = {};
+  
+      response.orders.forEach(({ mainOrder, subOrder }) => {
+        const orderId = mainOrder.orderId;
+        const [beforeFor, afterFor] = mainOrder.description.split("for").map(str => str.trim());
+        if (!grouped[orderId]) {
+          grouped[orderId] = {
+            id: orderId,
+            description: beforeFor,
+            totalAmount: mainOrder.totalAmount,
+            dueDate: new Date().toISOString(), // mock or add from backend
+            landlord: afterFor, // you can replace this if you return landlord info
+            status: mainOrder.paymentStatus as OrderStatus, // default unless backend returns something else
+            createdAt: new Date().toISOString(),
+            paymentLink: mainOrder.paymentLink,
+            suborders: [],
+          };
+        }
+  
+        subOrder.forEach(sub => {
+          grouped[orderId].suborders.push({
+            id: sub.orderId,
+            amount: sub.suborderAmount,
+            status: sub.paymentStatus as OrderStatus,
+            payee: {
+              name: sub.name,
+              email: sub.email,
+            },
+          });
+        });
+      });
+  
+      // Step 2: Convert the grouped object into an array
+      const transformedOrders = Object.values(grouped);
+  
+      setOrders(transformedOrders);
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+      toast({
+        title: "Error",
+        description: "There was a problem fetching your orders.",
+        variant: "destructive",
+      });
+    }
   };
   
   const handleOrderUpdated = () => {

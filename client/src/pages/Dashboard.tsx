@@ -20,33 +20,83 @@ export default function Dashboard() {
     loadDashboardData();
   }, []);
   
-  const loadDashboardData = () => {
-    const allOrders = getOrders();
-    const userPendingOrders = getPendingOrders();
-    const userCompletedOrders = getCompletedOrders();
-    const currentUser = getCurrentUser();
-    
-    // Filter orders where the current user is a participant
-    const userOrders = allOrders.filter(order => 
-      order.suborders.some(suborder => suborder.payee.email === currentUser)
-    );
-    
-    // Sort by created date (most recent first) and take first 2
-    const recent = [...userOrders].sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    ).slice(0, 2);
-    
-    setTotalOrders(userOrders.length);
-    setPendingPayments(userPendingOrders.length);
-    setCompletedOrders(userCompletedOrders.length);
-    setRecentOrders(recent);
-  };
+  const loadDashboardData = async () => {
+  const currentUser = getCurrentUser();
+  const raw = sessionStorage.getItem("userOrderMap");
+  const userOrderMap = raw ? JSON.parse(raw) : {};
+
+  const response = await fetch(`/api/orders/${currentUser}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(userOrderMap),
+  });
+
+  if (!response.ok) {
+    console.error("Failed to fetch orders");
+    return;
+  }
+
+  const data = await response.json();
+
+  const grouped: { [key: string]: Order } = {};
+  let pendingCount = 0;
+  let completedCount = 0;
+
+  data.orders.forEach(({ mainOrder, subOrder }) => {
+    const orderId = mainOrder.orderId;
+    const [beforeFor, afterFor] = mainOrder.description.split("for").map(str => str.trim());
+
+    if (!grouped[orderId]) {
+      grouped[orderId] = {
+        id: orderId,
+        description: beforeFor,
+        totalAmount: mainOrder.totalAmount,
+        dueDate: new Date().toISOString(),
+        landlord: afterFor,
+        status: mainOrder.paymentStatus,
+        createdAt: new Date().toISOString(),
+        paymentLink: mainOrder.paymentLink,
+        suborders: [],
+      };
+    }
+
+    subOrder.forEach(sub => {
+      const suborder = {
+        id: sub.orderId,
+        amount: sub.suborderAmount,
+        status: sub.paymentStatus,
+        payee: {
+          name: sub.name,
+          email: sub.email,
+        },
+      };
+
+      grouped[orderId].suborders.push(suborder);
+
+      if (sub.email === currentUser) {
+        if (sub.paymentStatus === "PAYER_ACTION_REQUIRED") pendingCount++;
+        if (sub.paymentStatus === "APPROVED") completedCount++;
+      }
+    });
+  });
+
+  const ordersArray = Object.values(grouped);
+  const recent = [...ordersArray]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 2);
+
+  setTotalOrders(ordersArray.length);
+  setPendingPayments(pendingCount);
+  setCompletedOrders(completedCount);
+  setRecentOrders(recent);
+};
+
 
   return (
     <>
       <PageHeader 
         title="Dashboard"
-        description="Welcome to SplitPay! Manage your apartment payments."
+        description="Welcome to SplitPal! Manage your apartment payments."
         rightContent={
           <Link href={AppRoutes.CREATE_ORDER}>
             <Button className="bg-primary hover:bg-primary/90">

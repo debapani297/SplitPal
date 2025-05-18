@@ -62,6 +62,10 @@ export default function CreateOrderForm() {
     }
   };
 
+  function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
   // Handle form submission
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
@@ -69,34 +73,32 @@ export default function CreateOrderForm() {
     try {
       const totalAmount = Number(data.totalAmount);
       const amountPerPayee = totalAmount / data.payees.length;
-      
-      // Create new order object
-      const newOrder = {
-        id: `ORDER-${nanoid(6).toUpperCase()}`,
-        description: data.description,
-        totalAmount,
-        dueDate: data.dueDate,
-        landlord: data.landlord,
-        suborders: data.payees.map(payee => ({
-          id: `SUB-${nanoid(8).toUpperCase()}`,
-          payee,
-          amount: amountPerPayee,
-          status: "pending" as const,
-        })),
-        status: "pending" as const,
-        createdAt: new Date().toISOString(),
-      };
-      
-      // Save to session storage
-      addOrder(newOrder);
-      
+
+      const response = await fetch("/api/createOrder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          order: {
+            description: data.description + ` for ` + data.landlord,
+            amount: totalAmount,
+          },
+          participants: data.payees,
+        }),
+      });
+  
+      const result = await response.json();
+  
+      if (!response.ok) throw new Error(result.message || "Order creation failed");
+      updateUserOrderMap(result.data.mainID, result.data.suborders);
+
       toast({
         title: "Order Created",
         description: "Your payment order has been created successfully.",
-        variant: "success",
+        variant: "default",
       });
       
       // Navigate to orders page
+      await sleep(20000);
       navigate(AppRoutes.VIEW_ORDERS);
     } catch (error) {
       console.error("Error creating order:", error);
@@ -238,3 +240,33 @@ export default function CreateOrderForm() {
     </Card>
   );
 }
+
+function updateUserOrderMap(mainID: any, suborders: any) {
+  // Step 1: Load existing session storage or initialize empty
+  const raw = sessionStorage.getItem("userOrderMap");
+  const userOrderMap = raw ? JSON.parse(raw) : {};
+
+  // Step 2: Iterate through returned suborders and update map
+  suborders.forEach(({ email, orderId }) => {
+    if (!userOrderMap[email]) {
+      // New user entry
+      userOrderMap[email] = {
+        mainOrder: [mainID],
+        subOrder: [orderId],
+      };
+    } else {
+      // Existing user entry
+      if (!userOrderMap[email].mainOrder.includes(mainID)) {
+        userOrderMap[email].mainOrder.push(mainID);
+      }
+      if (!userOrderMap[email].subOrder.includes(orderId)) {
+        userOrderMap[email].subOrder.push(orderId);
+      }
+    }
+  });
+
+  // Step 3: Save updated object back to session
+  sessionStorage.setItem("userOrderMap", JSON.stringify(userOrderMap));
+}
+
+

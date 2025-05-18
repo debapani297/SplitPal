@@ -14,11 +14,18 @@ import {
   OrdersController,
 } from "@paypal/paypal-server-sdk";
 import { Request, Response } from "express";
+import { config } from '@dotenvx/dotenvx';
 
 /* PayPal Controllers Setup */
 
-const { PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET } = process.env;
-
+const envFilePath = process.env.ENV_FILE_PATH || '.env';
+config({ path: envFilePath });
+// const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID || '';
+// console.log(PAYPAL_CLIENT_ID);
+// console.log(process.env.PAYPAL_CLIENT_ID);
+// const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET || '';
+const PAYPAL_CLIENT_ID = "abc";
+const PAYPAL_CLIENT_SECRET = "abc";
 if (!PAYPAL_CLIENT_ID) {
   throw new Error("Missing PAYPAL_CLIENT_ID");
 }

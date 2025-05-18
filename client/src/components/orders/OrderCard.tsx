@@ -7,6 +7,8 @@ import SubordersList from "./SubordersList";
 import PaymentModal from "@/components/payment/PaymentModal";
 import { useToast } from "@/hooks/use-toast";
 import { Icon } from "@/components/ui/icon";
+import MainPaymentModal from "../payment/MainPaymentModal";
+
 
 interface OrderCardProps {
   order: Order;
@@ -17,6 +19,7 @@ export default function OrderCard({ order, onOrderUpdated }: OrderCardProps) {
   const [selectedSuborder, setSelectedSuborder] = useState<Suborder | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isProcessingMainPayment, setIsProcessingMainPayment] = useState(false);
+  const [isMainModalOpen, setIsMainModalOpen] = useState(false);
   const { toast } = useToast();
 
   const openPaymentModal = (suborder: Suborder) => {
@@ -29,8 +32,25 @@ export default function OrderCard({ order, onOrderUpdated }: OrderCardProps) {
     setSelectedSuborder(null);
   };
 
+  const handlePayMainOrder = () => {
+  setIsMainModalOpen(true);
+};
+
+const closeMainModal = () => {
+  setIsMainModalOpen(false);
+};
+
+  const handleMainPaymentComplete = () => {
+  toast({
+    title: "Main Payment Successful",
+    description: "Your payment to the landlord has been processed successfully.",
+    variant: "success",
+  });
+  closeMainModal();
+  if (onOrderUpdated) onOrderUpdated();
+};
+
   const handlePaymentComplete = (suborderId: string) => {
-    updateSuborderStatus(order.id, suborderId, "completed");
     toast({
       title: "Payment Successful",
       description: "Your payment has been processed successfully.",
@@ -40,72 +60,53 @@ export default function OrderCard({ order, onOrderUpdated }: OrderCardProps) {
     if (onOrderUpdated) onOrderUpdated();
   };
 
-  const handlePayMainOrder = async () => {
-    setIsProcessingMainPayment(true);
-    
-    try {
-      // In a real app, this would make an API call to process the payment
-      // For this demo, we'll just update the order status
-      setTimeout(() => {
-        payMainOrder(order.id);
-        toast({
-          title: "Main Payment Successful",
-          description: "Your payment to the landlord has been processed successfully.",
-          variant: "success",
-        });
-        setIsProcessingMainPayment(false);
-        if (onOrderUpdated) onOrderUpdated();
-      }, 1500);
-    } catch (error) {
-      toast({
-        title: "Payment Failed",
-        description: "There was an error processing your payment.",
-        variant: "destructive",
-      });
-      setIsProcessingMainPayment(false);
-    }
-  };
-
-  const allSubordersPaid = order.suborders.every(suborder => suborder.status === "completed");
+  console.log(order.suborders.map(s => s.status));
+  const allSubordersPaid = order.suborders.every(suborder => suborder.status === "APPROVED");
+    const showPayMainButton = allSubordersPaid && order.status !== "APPROVED";
 
   return (
     <div className="bg-white rounded-lg shadow overflow-hidden">
-      {/* Order header */}
+      {/* Header */}
       <div className="px-6 py-4 border-b border-gray-200 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <div className="flex items-center">
             <h3 className="text-lg font-semibold text-secondary">{order.id}</h3>
-            <span className={`ml-3 status-badge ${order.status === "pending" ? "status-pending" : "status-completed"}`}>
-              {order.status === "pending" ? "Pending" : "Completed"}
-            </span>
+            {order.status && (
+              <span className={`ml-3 status-badge ${order.status === "PAYER_ACTION_REQUIRED" ? "status-pending" : "status-completed"}`}>
+                {order.status === "PAYER_ACTION_REQUIRED" ? "Pending" : "Completed"}
+              </span>
+            )}
           </div>
           <p className="text-gray-600 mt-1">{order.description}</p>
         </div>
         <div className="flex flex-col md:items-end">
           <span className="text-lg font-bold text-secondary">{formatCurrency(order.totalAmount)}</span>
-          <span className="text-sm text-gray-500">
-            {order.status === "completed" 
-              ? `Paid: ${new Date(order.dueDate).toLocaleDateString()}`
-              : `Due: ${new Date(order.dueDate).toLocaleDateString()}`}
-          </span>
+          {order.dueDate && (
+            <span className="text-sm text-gray-500">
+              {order.status === "APPROVED"
+                ? `Paid: ${new Date(order.dueDate).toLocaleDateString()}`
+                : `Due: ${new Date(order.dueDate).toLocaleDateString()}`}
+            </span>
+          )}
         </div>
       </div>
-      
+
       {/* Suborders */}
-      <SubordersList 
-        suborders={order.suborders} 
-        onPayClick={openPaymentModal} 
-      />
-      
-      {/* Footer with landlord info */}
+      <SubordersList suborders={order.suborders} onPayClick={openPaymentModal} />
+
+      {/* Footer */}
       <div className="px-6 py-4 bg-gray-50 flex flex-col sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-sm text-gray-500">Payment to landlord</p>
-          <p className="font-medium text-secondary">{order.landlord}</p>
-        </div>
-        
-        {order.status === "pending" && allSubordersPaid ? (
-          <Button 
+        {order.landlord && (
+          <div>
+            <p className="text-sm text-gray-500">Payment to landlord</p>
+            <p className="font-medium text-secondary">{order.landlord}</p>
+          </div>
+        )}
+
+        {/* Main Payment Button (optional) */}
+        {showPayMainButton ? (
+           <>
+          <Button
             className="mt-3 sm:mt-0 bg-secondary hover:bg-secondary/90"
             onClick={handlePayMainOrder}
             disabled={isProcessingMainPayment}
@@ -118,17 +119,24 @@ export default function OrderCard({ order, onOrderUpdated }: OrderCardProps) {
               </>
             )}
           </Button>
-        ) : order.status === "completed" ? (
-          <div className="mt-3 sm:mt-0 px-4 py-2 bg-gray-200 text-secondary rounded flex items-center">
-            <Icon name="check-circle" className="mr-1" /> Payment Complete
-          </div>
+          {isMainModalOpen && (
+  <MainPaymentModal
+    isOpen={isMainModalOpen}
+    onClose={closeMainModal}
+    order={order}
+    onPaymentComplete={handleMainPaymentComplete}
+  />
+)}
+</>
         ) : (
-          <div className="mt-3 sm:mt-0 px-4 py-2 bg-gray-200 text-secondary rounded flex items-center">
-            <Icon name="info-circle" className="mr-1" /> All Suborders Must Be Paid
-          </div>
+          order.status !== "APPROVED" && (
+    <div className="mt-3 sm:mt-0 px-4 py-2 bg-gray-200 text-secondary rounded flex items-center">
+      <Icon name="info-circle" className="mr-1" /> All Suborders Must Be Paid
+    </div>
+  )
         )}
       </div>
-      
+
       {/* Payment Modal */}
       {selectedSuborder && (
         <PaymentModal

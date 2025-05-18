@@ -25,16 +25,12 @@ export default function PaymentModal({
   onPaymentComplete
 }: PaymentModalProps) {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
-  const [isProcessing, setIsProcessing] = useState(false);
   const [currentUser, setCurrentUser] = useState<string>("");
   const { toast } = useToast();
   
-  // Get the current logged-in user
   useEffect(() => {
     const user = getCurrentUser();
     setCurrentUser(user);
-    
-    // If the current user doesn't match the payee email, show a warning
     if (user !== suborder.payee.email && isOpen) {
       toast({
         title: "Payment Notice",
@@ -48,23 +44,16 @@ export default function PaymentModal({
     setPaymentMethod(method);
   };
 
-  const handlePayment = async () => {
-    setIsProcessing(true);
-    
-    try {
-      // In a real application, this would call your payment API
-      // For this demo, we're simulating a successful payment after a delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      onPaymentComplete();
-    } catch (error) {
-      console.error("Payment error:", error);
+  const handlePayment = () => {
+    if (suborder.paymentLink) {
+      window.open(suborder.paymentLink, "_blank");
+      onClose();
+    } else {
       toast({
-        title: "Payment Failed",
-        description: "There was an error processing your payment. Please try again.",
+        title: "Missing Payment Link",
+        description: "Payment link is not available for this suborder.",
         variant: "destructive"
       });
-    } finally {
-      setIsProcessing(false);
     }
   };
 
@@ -81,7 +70,7 @@ export default function PaymentModal({
             )}
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="py-4">
           <div className="mb-4">
             <div className="bg-blue-50 rounded p-3 flex items-start mb-4">
@@ -89,63 +78,28 @@ export default function PaymentModal({
               <div>
                 <p className="text-sm font-medium text-blue-700">Payment Information</p>
                 <p className="text-sm text-blue-600">
-                  You're paying your portion of "{orderDescription}"
+                  Proceed to the payment page to complete the transaction.
                 </p>
               </div>
             </div>
           </div>
-          
+
           <div className="mb-6 bg-gray-50 p-4 rounded">
             <div className="flex justify-between mb-2">
               <span className="text-gray-500">Amount due</span>
               <span className="font-medium text-secondary">{formatCurrency(suborder.amount)}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Payment method fee</span>
-              <span className="font-medium text-secondary">{formatCurrency(0)}</span>
-            </div>
-            <div className="border-t border-gray-200 mt-2 pt-2 flex justify-between">
-              <span className="font-medium text-secondary">Total</span>
-              <span className="font-bold text-secondary">{formatCurrency(suborder.amount)}</span>
-            </div>
-          </div>
-          
-          <PaymentMethodSelector 
-            selectedMethod={paymentMethod}
-            onSelectMethod={handlePaymentSelect}
-          />
+          </div> 
         </div>
-        
+
         <DialogFooter className="flex justify-end gap-3">
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          
-          {paymentMethod === 'paypal' ? (
-            <div className="w-full">
-              <PayPalCheckoutButton 
-                amount={suborder.amount.toString()} 
-                currency="USD" 
-                intent="CAPTURE"
-                onSuccess={onPaymentComplete}
-                onError={(error) => {
-                  toast({
-                    title: "Payment Failed",
-                    description: "There was an error processing your PayPal payment. Please try again.",
-                    variant: "destructive"
-                  });
-                }}
-              />
-            </div>
-          ) : (
-            <Button 
+          <Button variant="outline" onClick={onClose}>Back to orders</Button>
+          <Button 
               className="bg-primary hover:bg-primary/90"
               onClick={handlePayment}
-              disabled={isProcessing}
             >
-              {isProcessing ? `Processing...` : `Pay ${formatCurrency(suborder.amount)}`}
+              Pay {formatCurrency(suborder.amount)}
             </Button>
-          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

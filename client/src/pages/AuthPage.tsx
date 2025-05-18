@@ -25,7 +25,7 @@ export default function AuthPage() {
   return (
     <>
       <PageHeader 
-        title="Welcome to SplitPay" 
+        title="Welcome to SplitPal" 
         description="Log in or create a new account to start managing your rent payments"
       />
       
@@ -51,7 +51,7 @@ export default function AuthPage() {
           <div className="space-y-6">
             <h2 className="text-3xl font-bold text-secondary">Simplify Rent Payments</h2>
             <p className="text-secondary/80">
-              SplitPay makes it easy for roommates to split and manage their rent payments.
+              SplitPal makes it easy for roommates to split and manage their rent payments.
             </p>
             
             <div className="space-y-4">

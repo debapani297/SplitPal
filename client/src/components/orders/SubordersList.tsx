@@ -16,7 +16,8 @@ export default function SubordersList({ suborders, onPayClick }: SubordersListPr
     <div className="divide-y divide-gray-200">
       {suborders.map((suborder) => {
         const isCurrentUser = suborder.payee.email === currentUser;
-        const isPending = suborder.status === "pending";
+        const isPaid = suborder.status === "APPROVED";
+        const isPending = !isPaid;
         const showPayButton = isCurrentUser && isPending;
 
         return (
@@ -36,21 +37,26 @@ export default function SubordersList({ suborders, onPayClick }: SubordersListPr
               <div className="mr-6">
                 <p className="font-medium text-secondary">{formatCurrency(suborder.amount)}</p>
                 <div className="flex items-center text-sm">
-                  <span className={`status-indicator ${isPending ? 'status-indicator-pending' : 'status-indicator-completed'}`}></span>
-                  <span className={isPending ? 'text-warning' : 'text-success'}>
-                    {isPending ? 'Pending' : 'Paid'}
-                  </span>
-                </div>
+  <span
+    className={`status-indicator ${
+      suborder.status === "APPROVED"
+        ? "status-indicator-completed"
+        : "status-indicator-pending"
+    }`}
+  ></span>
+  <span
+    className={
+      suborder.status === "APPROVED" ? "text-success" : "text-warning"
+    }
+  >
+    {suborder.status === "APPROVED"
+      ? "Paid"
+      : suborder.status === "PAYER_ACTION_REQUIRED"
+      ? "Action Required"
+      : "Pending"}
+  </span>
+</div>
               </div>
-              {showPayButton && (
-                <Button
-                  onClick={() => onPayClick(suborder)}
-                  className="bg-primary hover:bg-primary/90"
-                  size="sm"
-                >
-                  Pay
-                </Button>
-              )}
             </div>
           </div>
         );

@@ -46,7 +46,7 @@ export default function Sidebar() {
     { path: AppRoutes.CREATE_ORDER, label: "Create Order", icon: "plus-circle" },
     { path: AppRoutes.VIEW_ORDERS, label: "View Orders", icon: "list-alt" },
     { path: AppRoutes.PAY_SUBORDERS, label: "Pay Suborders", icon: "credit-card" },
-    { path: AppRoutes.PAY_MAIN_ORDER, label: "Pay Main Order", icon: "dollar-sign" },
+    // { path: AppRoutes.PAY_MAIN_ORDER, label: "Pay Main Order", icon: "dollar-sign" },
   ];
   
   // Show different nav items based on authentication state
@@ -59,7 +59,7 @@ export default function Sidebar() {
       {/* Mobile Header */}
       <header className="bg-white border-b border-gray-200 px-4 py-5 flex justify-between items-center w-full md:hidden">
         <div className="flex items-center">
-          <span className="text-primary font-bold text-2xl">SplitPay</span>
+          <span className="text-primary font-bold text-2xl">SplitPal</span>
         </div>
         <button onClick={toggleSidebar} className="text-secondary">
           <Icon name="bars" className="text-xl" />
@@ -69,7 +69,7 @@ export default function Sidebar() {
       {/* Sidebar */}
       <aside className={`bg-white w-full md:w-64 md:min-h-screen shadow z-10 ${isMobile ? 'fixed inset-y-0 left-0' : ''} ${isOpen ? 'block' : 'hidden md:block'}`}>
         <div className="p-6">
-          <h1 className="text-primary font-bold text-2xl">SplitPay</h1>
+          <h1 className="text-primary font-bold text-2xl">SplitPal</h1>
         </div>
         <div className="border-t border-gray-200">
           <nav className="py-4">

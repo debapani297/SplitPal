@@ -1,5 +1,11 @@
-// Order status types
-export type OrderStatus = "pending" | "completed";
+export type OrderStatus =
+  | "pending"
+  | "completed"
+  | "APPROVED"
+  | "PAYER_ACTION_REQUIRED"
+  | "CANCELLED"
+  | "FAILED";
+
 
 // Payee info
 export interface Payee {
@@ -13,18 +19,20 @@ export interface Suborder {
   payee: Payee;
   amount: number;
   status: OrderStatus;
+  paymentLink?: string;
 }
 
-// Main Order structure
+
 export interface Order {
   id: string;
   description: string;
   totalAmount: number;
-  dueDate: string;
-  landlord: string;
   suborders: Suborder[];
-  status: OrderStatus;
-  createdAt: string;
+    paymentLink?: string;
+  dueDate?: string;
+  landlord?: string;
+  status?: OrderStatus;
+  createdAt?: string;
 }
 
 // Form data for creating an order
@@ -50,6 +58,14 @@ export interface PaymentRequest {
   description: string;
   paymentMethod: PaymentMethod;
 }
+
+export interface LightOrder {
+  id: string;
+  description: string;
+  totalAmount: number;
+  suborders: Suborder[];
+}
+
 
 // Routes in the application
 export enum AppRoutes {
